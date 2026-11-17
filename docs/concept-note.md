@@ -78,6 +78,30 @@ What the "proven" row above looks like today — each diagram is the architectur
 2. Interest in a working session to walk through both running prototypes and the integration plan in more depth.
 3. Whether a reference operator would be open to validating the concept against anonymized real network data, once the synthetic integration is working end to end.
 
+## 08 · Feedback from WG3, and what's next
+
+This concept was presented to AI-RAN Alliance WG3 members in November 2026. Three threads came back, and they reshape the next phase of work.
+
+**Why edge inferencing, specifically.** The concept leaned on colocated inference as a destination without saying why it's required for *this* workload, and that's a fair challenge — the latency case for edge AI is genuinely mixed once reasoning models are involved, since network transit is often a small share of total response time for a single inference call. The argument that survives scrutiny here is narrower than "edge is faster":
+
+- *Conversational latency budget, not model latency.* A phone call needs sub-second turn latency to feel natural, and that tax compounds on every turn of a multi-turn call — unlike a one-shot inference request, where a single round-trip is easy to absorb.
+- *Telemetry gravity.* FM/PM/CM data is high-volume and short-lived. Correlating it centrally on every call means shipping raw RAN telemetry off the edge continuously; correlating it at or near the RAN means only the conclusion travels.
+- *Resilience.* This is a network-health tool. One built on a dependency on a healthy WAN path to a distant inference cluster is undermined by exactly the class of failure it exists to diagnose — degraded backhaul or core congestion. An agent that keeps working when the network is unwell is a different pitch from one that doesn't.
+- *Sovereignty.* Subscriber location and radio-behaviour data staying in-domain is a secondary but real argument alongside the above.
+
+This needs real numbers behind it, not just the argument — see below.
+
+**STT/TTS latency benchmarks.** The voice agent already treats speech-to-text and text-to-speech as pluggable providers, so this is a measurement task rather than new integration: time each leg of a call turn (audio in → STT token → LLM first token → TTS first audio byte) across a fixed set of test utterances against the current cloud-hosted providers, and report p50/p95 per leg. That gives the edge argument above a concrete baseline, and sets up a future comparison against edge-hosted STT/TTS models once one exists to compare against.
+
+**An on-device agent (proposed by Samsung).** The idea: instead of (or alongside) the voice agent's server-side lookup of a caller's home cell, a lightweight agent running on the handset itself supplies device-side radio diagnostics directly — serving cell, signal quality, recent retry or drop events — queried by the voice agent during the call. This extends the "where does inference run" question one more hop, from the RAN edge to the device itself.
+
+Two separate design questions came out of scoping this:
+
+- *What the device agent reports.* No TM Forum specification covers UE-side log or radio-diagnostic content — `TMF908` (IoT Agent and Device Component Suite) is an IoT device-management spec and the wrong shape for this. The closer existing frameworks are 3GPP's own UE-side mechanisms (Minimization of Drive Tests, UE Information Report, RRC measurement reports), which should anchor the device agent's data model instead.
+- *How the device agent talks to the others.* TM Forum released **A2A-T** (`IG1453` / `IG1453A`) at Accelerate Week in February 2026 — a telecom-specific extension of the Linux Foundation's A2A protocol, built for network-layer concerns (reliability, security, latency) rather than plain A2A's enterprise-software framing. It's already carrying catalyst projects from China Mobile, Orange and Huawei, and sits alongside GSMA's "Open Autonomous-Network Agent Ecosystem Project," launched September 2026. Adopting A2A-T as the protocol between the voice agent, the device agent, and the network agent means citing a live TM Forum initiative instead of inventing a bespoke one — directly relevant to a WG3 audience.
+
+The nearest-term version of this is an *emulated* device agent: a small local process exposing synthetic UE-side signals, queried over an A2A-T-shaped exchange, standing in for a real on-device agent until one exists. All three threads above are new, unscoped work — none of it changes the "proven" row in the table in Section 05.
+
 ---
 
 Athul Prasad · Cloudera AI
